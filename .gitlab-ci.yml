@@ -20,8 +20,8 @@ validate-python-syntax:
   stage: validate
   script:
     - echo "🔍 Проверка синтаксиса Python файлов..."
-    - python -m py_compile manage.py
-    - python -c "import py_compile, os; [py_compile.compile(os.path.join(root, f)) for root, dirs, files in os.walk('.') for f in files if f.endswith('.py') and 'venv' not in root and '.git' not in root]"
+    - python3 -m py_compile manage.py
+    - python3 -c "import py_compile, os; [py_compile.compile(os.path.join(root, f)) for root, dirs, files in os.walk('.') for f in files if f.endswith('.py') and 'venv' not in root and '.git' not in root]"
     - echo "✅ Синтаксис Python корректен"
 
 # Проверка валидности Django настроек
@@ -32,7 +32,7 @@ validate-django-settings:
     - pip install -r requirements.txt
   script:
     - echo "🔍 Проверка настроек Django..."
-    - python manage.py check
+    - python3 manage.py check
     - echo "✅ Настройки Django валидны"
 
 # Проверка миграций Django (без БД)
@@ -43,7 +43,7 @@ validate-migrations:
     - pip install -r requirements.txt
   script:
     - echo "🔍 Проверка миграций Django..."
-    - python manage.py makemigrations --check --dry-run
+    - python3 manage.py makemigrations --check --dry-run
     - echo "✅ Миграции валидны"
 
 # ============================================
@@ -74,7 +74,7 @@ test-django:
     - pip install -r requirements.txt
   script:
     - echo "🧪 Запуск Django тестов..."
-    - python manage.py test --verbosity=2
+    - python3 manage.py test --verbosity=2
     - echo "✅ Тесты пройдены"
 
 # Проверка статических файлов
@@ -85,7 +85,7 @@ test-staticfiles:
     - pip install -r requirements.txt
   script:
     - echo "🔍 Проверка статических файлов..."
-    - python manage.py collectstatic --noinput --dry-run
+    - python3 manage.py collectstatic --noinput --dry-run
     - echo "✅ Статические файлы проверены"
 
 # ============================================
@@ -100,7 +100,7 @@ build-staticfiles:
     - pip install -r requirements.txt
   script:
     - echo "🏗️ Сборка статических файлов..."
-    - python manage.py collectstatic --noinput
+    - python3 manage.py collectstatic --noinput
     - echo "✅ Статические файлы собраны"
   artifacts:
     paths:
