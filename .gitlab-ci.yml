@@ -1,9 +1,349 @@
-stages:
-  - test
+# GitLab CI/CD Pipeline для Django проекта
+# Полноценный пайплайн с несколькими этапами
 
-test-job:
-  stage: test
+stages:
+  - validate      # Проверка синтаксиса и валидация
+  - lint          # Линтинг кода
+  - test          # Тестирование
+  - security      # Проверка безопасности
+  - build         # Сборка проекта
+
+# Общие переменные
+variables:
+  PYTHON_VERSION: "3.11"
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+  DJANGO_SETTINGS_MODULE: "shopproject.settings"
+
+# Кеш для зависимостей Python
+cache:
+  paths:
+    - .cache/pip/
+    - venv/
+
+# ============================================
+# STAGE: VALIDATE - Проверка и валидация
+# ============================================
+
+# Проверка синтаксиса Python
+validate-python-syntax:
+  stage: validate
+  image: python:${PYTHON_VERSION}-slim
   script:
-    - echo "Начало"
-    - echo "Продолжение"
-    - echo "Конец"
+    - echo "🔍 Проверка синтаксиса Python файлов..."
+    - python -m py_compile manage.py
+    - find . -name "*.py" -not -path "./venv/*" -not -path "./.git/*" -exec python -m py_compile {} \;
+    - echo "✅ Синтаксис Python корректен"
+  only:
+    - merge_requests
+    - main
+    - develop
+
+# Проверка валидности Django настроек
+validate-django-settings:
+  stage: validate
+  image: python:${PYTHON_VERSION}-slim
+  before_script:
+    - pip install --upgrade pip
+    - pip install -r requirements.txt
+  script:
+    - echo "🔍 Проверка настроек Django..."
+    - python manage.py check --deploy
+    - python manage.py check
+    - echo "✅ Настройки Django валидны"
+  only:
+    - merge_requests
+    - main
+    - develop
+
+# Проверка миграций Django
+validate-migrations:
+  stage: validate
+  image: python:${PYTHON_VERSION}-slim
+  services:
+    - postgres:15-alpine
+  variables:
+    POSTGRES_DB: "test_db"
+    POSTGRES_USER: "postgres"
+    POSTGRES_PASSWORD: "postgres"
+    DATABASE_URL: "postgresql://postgres:postgres@postgres:5432/test_db"
+  before_script:
+    - pip install --upgrade pip
+    - pip install -r requirements.txt
+    - pip install psycopg2-binary
+  script:
+    - echo "🔍 Проверка миграций Django..."
+    - python manage.py makemigrations --check --dry-run
+    - python manage.py migrate --check
+    - echo "✅ Миграции валидны"
+  only:
+    - merge_requests
+    - main
+    - develop
+
+# ============================================
+# STAGE: LINT - Линтинг кода
+# ============================================
+
+# Линтинг с flake8
+lint-flake8:
+  stage: lint
+  image: python:${PYTHON_VERSION}-slim
+  before_script:
+    - pip install flake8
+  script:
+    - echo "🔍 Линтинг кода с flake8..."
+    - flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+    - flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+    - echo "✅ Линтинг flake8 завершен"
+  allow_failure: true
+  artifacts:
+    reports:
+      codequality: flake8-report.json
+    when: always
+    expire_in: 1 week
+  only:
+    - merge_requests
+    - main
+    - develop
+
+# Проверка форматирования с black
+lint-black:
+  stage: lint
+  image: python:${PYTHON_VERSION}-slim
+  before_script:
+    - pip install black
+  script:
+    - echo "🔍 Проверка форматирования с black..."
+    - black --check --diff .
+    - echo "✅ Форматирование проверено"
+  allow_failure: true
+  only:
+    - merge_requests
+    - main
+    - develop
+
+# Проверка импортов с isort
+lint-isort:
+  stage: lint
+  image: python:${PYTHON_VERSION}-slim
+  before_script:
+    - pip install isort
+  script:
+    - echo "🔍 Проверка сортировки импортов..."
+    - isort --check-only --diff .
+    - echo "✅ Импорты проверены"
+  allow_failure: true
+  only:
+    - merge_requests
+    - main
+    - develop
+
+# ============================================
+# STAGE: TEST - Тестирование
+# ============================================
+
+# Запуск unit тестов
+test-unit:
+  stage: test
+  image: python:${PYTHON_VERSION}-slim
+  services:
+    - postgres:15-alpine
+  variables:
+    POSTGRES_DB: "test_db"
+    POSTGRES_USER: "postgres"
+    POSTGRES_PASSWORD: "postgres"
+    DATABASE_URL: "postgresql://postgres:postgres@postgres:5432/test_db"
+  before_script:
+    - pip install --upgrade pip
+    - pip install -r requirements.txt
+    - pip install psycopg2-binary pytest pytest-django pytest-cov
+  script:
+    - echo "🧪 Запуск unit тестов..."
+    - python manage.py migrate
+    - python manage.py test --verbosity=2
+    - echo "✅ Unit тесты пройдены"
+  coverage: '/TOTAL.*\s+(\d+%)$/'
+  artifacts:
+    reports:
+      junit: junit.xml
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage.xml
+    paths:
+      - htmlcov/
+    expire_in: 1 week
+  only:
+    - merge_requests
+    - main
+    - develop
+
+# Запуск тестов с покрытием кода
+test-coverage:
+  stage: test
+  image: python:${PYTHON_VERSION}-slim
+  services:
+    - postgres:15-alpine
+  variables:
+    POSTGRES_DB: "test_db"
+    POSTGRES_USER: "postgres"
+    POSTGRES_PASSWORD: "postgres"
+  before_script:
+    - pip install --upgrade pip
+    - pip install -r requirements.txt
+    - pip install psycopg2-binary coverage
+  script:
+    - echo "🧪 Запуск тестов с покрытием..."
+    - python manage.py migrate
+    - coverage run --source='.' manage.py test
+    - coverage report -m
+    - coverage html
+    - echo "✅ Покрытие кода проанализировано"
+  artifacts:
+    paths:
+      - htmlcov/
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage.xml
+    expire_in: 1 week
+  only:
+    - merge_requests
+    - main
+    - develop
+
+# Проверка статических файлов
+test-staticfiles:
+  stage: test
+  image: python:${PYTHON_VERSION}-slim
+  before_script:
+    - pip install --upgrade pip
+    - pip install -r requirements.txt
+  script:
+    - echo "🔍 Проверка статических файлов..."
+    - python manage.py collectstatic --noinput --dry-run
+    - echo "✅ Статические файлы проверены"
+  only:
+    - merge_requests
+    - main
+    - develop
+
+# ============================================
+# STAGE: SECURITY - Проверка безопасности
+# ============================================
+
+# Проверка уязвимостей в зависимостях
+security-dependencies:
+  stage: security
+  image: python:${PYTHON_VERSION}-slim
+  before_script:
+    - pip install --upgrade pip
+    - pip install safety
+  script:
+    - echo "🔒 Проверка уязвимостей в зависимостях..."
+    - safety check --file requirements.txt --json
+    - echo "✅ Зависимости проверены на уязвимости"
+  allow_failure: true
+  artifacts:
+    reports:
+      sast: safety-report.json
+    expire_in: 1 week
+  only:
+    - merge_requests
+    - main
+    - develop
+
+# Сканирование кода на уязвимости
+security-bandit:
+  stage: security
+  image: python:${PYTHON_VERSION}-slim
+  before_script:
+    - pip install bandit
+  script:
+    - echo "🔒 Сканирование кода на уязвимости..."
+    - bandit -r . -f json -o bandit-report.json || true
+    - bandit -r . -ll
+    - echo "✅ Сканирование безопасности завершено"
+  allow_failure: true
+  artifacts:
+    reports:
+      sast: bandit-report.json
+    expire_in: 1 week
+  only:
+    - merge_requests
+    - main
+    - develop
+
+# Проверка секретов в коде
+security-secrets:
+  stage: security
+  image: python:${PYTHON_VERSION}-slim
+  before_script:
+    - pip install detect-secrets
+  script:
+    - echo "🔒 Проверка на наличие секретов в коде..."
+    - detect-secrets scan --baseline .secrets.baseline || true
+    - echo "✅ Проверка секретов завершена"
+  allow_failure: true
+  only:
+    - merge_requests
+    - main
+    - develop
+
+# ============================================
+# STAGE: BUILD - Сборка проекта
+# ============================================
+
+# Сборка Docker образа (если используется)
+build-docker:
+  stage: build
+  image: docker:latest
+  services:
+    - docker:dind
+  before_script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+  script:
+    - echo "🏗️ Сборка Docker образа..."
+    - docker build -t $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG -t $CI_REGISTRY_IMAGE:latest .
+    - docker push $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG
+    - docker push $CI_REGISTRY_IMAGE:latest
+    - echo "✅ Docker образ собран и загружен"
+  only:
+    - main
+    - develop
+  when: manual
+
+# Сборка статических файлов
+build-staticfiles:
+  stage: build
+  image: python:${PYTHON_VERSION}-slim
+  before_script:
+    - pip install --upgrade pip
+    - pip install -r requirements.txt
+  script:
+    - echo "🏗️ Сборка статических файлов..."
+    - python manage.py collectstatic --noinput
+    - echo "✅ Статические файлы собраны"
+  artifacts:
+    paths:
+      - staticfiles/
+    expire_in: 1 week
+  only:
+    - main
+    - develop
+
+# Создание архива для деплоя
+build-archive:
+  stage: build
+  image: alpine:latest
+  script:
+    - echo "🏗️ Создание архива проекта..."
+    - apk add --no-cache tar gzip
+    - tar -czf project-${CI_COMMIT_SHORT_SHA}.tar.gz --exclude='.git' --exclude='venv' --exclude='__pycache__' .
+    - echo "✅ Архив создан"
+  artifacts:
+    paths:
+      - project-*.tar.gz
+    expire_in: 1 week
+  only:
+    - main
+    - develop
