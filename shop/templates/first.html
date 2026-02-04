@@ -1,0 +1,112 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href={% static 'css/bootstrap.css' %}>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Пример HTML Шаблона</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f9;
+            color: #333;
+        }
+        header {
+            background-color: #333;
+            color: #fff;
+            padding: 10px 0;
+            text-align: center;
+        }
+        nav {
+            background-color: #444;
+            overflow: hidden;
+        }
+        nav a {
+            float: left;
+            display: block;
+            color: #f2f2f2;
+            text-align: center;
+            padding: 14px 16px;
+            text-decoration: none;
+        }
+        nav a:hover {
+            background-color: #ddd;
+            color: black;
+        }
+        .container {
+            width: 80%;
+            margin: auto;
+            overflow: hidden;
+        }
+        .main-content {
+            background-color: #fff;
+            padding: 20px;
+            margin-top: 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        .news-section {
+            background-color: #fff;
+            padding: 20px;
+            margin-top: 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        footer {
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+            padding: 10px 0;
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+        }
+        @media (max-width: 768px) {
+            nav a {
+                float: none;
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>Мой Сайт</h1>
+</header>
+
+<nav>
+    <a href="{% url 'first_view' %}">Главная</a>
+    <a href="{% url 'second_view' %}">О нас</a>
+    <a href="#services">Услуги</a>
+    <a href="#contact">Контакты</a>
+</nav>
+
+<div class="container">
+    <section class="main-content">
+        <h2>Добро пожаловать на наш сайт!</h2>
+        <p>Здесь вы можете найти всю необходимую информацию о наших услугах и продуктах. Мы стремимся предоставлять высококачественные товары и обслуживание.</p>
+    </section>
+
+    <section class="news-section">
+        <h2>Последние новости</h2>
+        <article>
+            <h3>Новость 1</h3>
+            <p>Вот текст первой новости. Здесь можно рассказывать подробнее о событии или обновлении.</p>
+        </article>
+        <article>
+            <h3>Новость 2</h3>
+            <p>Вот текст второй новости. Здесь можно рассказывать подробнее о событии или обновлении.</p>
+        </article>
+    </section>
+</div>
+
+<footer>
+    <p>&copy; 2025 Мой Сайт. Все права защищены.</p>
+</footer>
+
+</body>
+</html>
