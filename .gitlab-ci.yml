@@ -59,7 +59,7 @@ lint-flake8:
     - echo "🔍 Линтинг кода с flake8..."
     - flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics || true
     - flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics || true
-    - echo "✅ Линтинг flake8 завершен"
+    - echo "✅ Линтинг flake8 завершен "
   allow_failure: true
 
 # ============================================
