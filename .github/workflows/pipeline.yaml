@@ -1,9 +1,10 @@
-name: Django check
+name: Django CI
 
 on:
   push:
     branches: [ master ]
   # pull_request:
+  #   branches: [ main, develop ]
 
 jobs:
   validate:
@@ -11,16 +12,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.13'
-      
-      - name: Create venv and install libs
+          python-version: '3.13'   # при необходимости поменяй версию
+
+      - name: Create virtualenv and install dependencies
         run: |
-          python3 -m venv .venv
+          python -m venv .venv
           source .venv/bin/activate
           pip install --upgrade pip
           pip install -r requirements.txt
@@ -28,17 +29,17 @@ jobs:
       - name: Check Django settings
         run: |
           source .venv/bin/activate
-          echo "Проверка настроек Django"
-          python3 manage.py check
+          echo "Проверка настроек Django..."
+          python manage.py check
           echo "Настройки валидны"
 
       - name: Check Django migrations
         run: |
           source .venv/bin/activate
-          echo "Проверка миграций Django"
-          python3 manage.py makemigrations --check --dry-run
+          echo "Проверка миграций Django..."
+          python manage.py makemigrations --check --dry-run
           echo "Миграции валидны"
-  
+
   test:
     name: Test Django static files
     runs-on: ubuntu-latest
@@ -52,16 +53,17 @@ jobs:
         uses: actions/setup-python@v6
         with:
           python-version: '3.13'
-      
-      - name: Create venv and install libs
+
+      - name: Create virtualenv and install dependencies
         run: |
-          python3 -m venv .venv
+          python -m venv .venv
           source .venv/bin/activate
           pip install --upgrade pip
           pip install -r requirements.txt
 
       - name: Check Django static files
         run: |
-          echo "Проверка статик-файлов Django"
-          python3 manage.py collectstatic --noinput --dry-run
-          echo "Статик-файлы валидны"
+          source .venv/bin/activate
+          echo "Проверка статик-файлов Django..."
+          python manage.py collectstatic --noinput --dry-run
+          echo "Статические файлы валидны"
