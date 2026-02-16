@@ -38,7 +38,7 @@ jobs:
           echo "Проверка миграций Django"
           python3 manage.py makemigrations --check --dry-run
           echo "Миграции валидны"
-
+  
   test:
     name: Test Django static files
     runs-on: ubuntu-latest
@@ -62,8 +62,6 @@ jobs:
 
       - name: Check Django static files
         run: |
-          source .venv/bin/activate
           echo "Проверка статик-файлов Django"
           python3 manage.py collectstatic --noinput --dry-run
           echo "Статик-файлы валидны"
-
